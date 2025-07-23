@@ -54,7 +54,7 @@ SERPER_API_KEY = os.getenv('SERPER_API_KEY')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
 # Initialize tools and models
-chat = ChatGroq(temperature=0.5, groq_api_key=GROQ_API_KEY, model_name="mixtral-8x7b-32768")
+chat = ChatGroq(temperature=0.5, groq_api_key=GROQ_API_KEY, model_name="llama-3.1-8b-instant")
 serper = GoogleSerperAPIWrapper(serper_api_key=SERPER_API_KEY)
 wikipedia = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
 youtube = YouTubeSearchTool()

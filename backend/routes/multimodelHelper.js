@@ -21,7 +21,7 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
 
 async function llmModelAudio(userText) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
   const prompt = `
     You are a helpful assistant named 'ShauryaNova' developed by Ayush Shaurya Jha. 
     You are supposed to answer accurately and precisely to the user's question. 
@@ -35,11 +35,11 @@ async function llmModelAudio(userText) {
 }
 
 async function llmModelImage(userText, imagePath) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
   const prompt = `
     You are a helpful assistant named 'ShauryaNova' developed by Ayush Shaurya Jha. 
     You are supposed to answer accurately and precisely to the user's question 
-    and image. Now, the user query begins:
+    and image.Do not add unnecessary prefix and suffix toyour answer.   Now, the user query begins:
     ${userText}
   `;
 
@@ -59,7 +59,7 @@ async function llmModelImage(userText, imagePath) {
 }
 
 async function llmModelVideo(userText, videoPath) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
   const prompt = `
     You are a helpful assistant named 'ShauryaNova' developed by Ayush Shaurya Jha.
     You are supposed to answer accurately and precisely to the user's question 

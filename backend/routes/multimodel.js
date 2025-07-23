@@ -2,6 +2,8 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
+
 const { llmModelImage, llmModelVideo, textToSpeech } = require('./multimodelHelper');
 
 const router = express.Router();
@@ -23,18 +25,46 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Image + Text + Voice Query Endpoint
+/**
+ * Safe delete with retries for Windows file lock (EPERM, EBUSY)
+ */
+async function safeDelete(filePath, retries = 5) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await fsPromises.unlink(filePath);
+      console.log(`✅ Deleted: ${filePath}`);
+      return;
+    } catch (err) {
+      if (err.code === 'EPERM' || err.code === 'EBUSY') {
+        console.warn(`File locked, retrying in 500ms... (${i + 1}/${retries})`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else if (err.code === 'ENOENT') {
+        console.log(`File already deleted: ${filePath}`);
+        return;
+      } else {
+        console.error('Error deleting file:', err);
+        return;
+      }
+    }
+  }
+  console.error(`❌ Failed to delete file after ${retries} attempts: ${filePath}`);
+}
+
+// ✅ IMAGE QUERY ENDPOINT
 router.post('/image-query', upload.single('image'), async (req, res) => {
+  let imagePath;
   try {
     const queryText = req.body.query_text;
-    const imagePath = req.file.path;
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file uploaded. Use key 'image' in form-data." });
+    }
+    imagePath = req.file.path;
 
-    console.log(`Received image query: ${queryText}`);
+    console.log(`📥 Received image query: ${queryText}`);
     console.log(`Image path: ${imagePath}`);
 
-    // Use the helper function to process the image + text query
+    // Process image with model
     const response = await llmModelImage(queryText, imagePath);
-    console.log(`Response: ${response}`);
 
     // Convert response to speech
     await textToSpeech(response);
@@ -44,22 +74,27 @@ router.post('/image-query', upload.single('image'), async (req, res) => {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   } finally {
-    // Clean up: remove the temporary image file
-    if (req.file) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Error deleting temporary file:', err);
-      });
+    if (imagePath) {
+      // Delay deletion slightly to avoid file-lock issues
+      setTimeout(() => safeDelete(imagePath), 1000);
     }
   }
 });
 
-// Video + Text + Voice Query Endpoint
+// ✅ VIDEO QUERY ENDPOINT
 router.post('/video-query', upload.single('video'), async (req, res) => {
+  let videoPath;
   try {
     const queryText = req.body.query_text;
-    const videoPath = req.file.path;
+    if (!req.file) {
+      return res.status(400).json({ error: "No video file uploaded. Use key 'video' in form-data." });
+    }
+    videoPath = req.file.path;
 
-    // Use the helper function to process the video + text query
+    console.log(`📥 Received video query: ${queryText}`);
+    console.log(`Video path: ${videoPath}`);
+
+    // Process video with model
     const response = await llmModelVideo(queryText, videoPath);
 
     // Convert response to speech
@@ -70,16 +105,13 @@ router.post('/video-query', upload.single('video'), async (req, res) => {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   } finally {
-    // Clean up: remove the temporary video file
-    if (req.file) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Error deleting temporary file:', err);
-      });
+    if (videoPath) {
+      setTimeout(() => safeDelete(videoPath), 1500);
     }
   }
 });
 
-// Endpoint to download the generated speech file
+// ✅ AUDIO DOWNLOAD ENDPOINT
 router.get('/download-audio', (req, res) => {
   const audioFilePath = path.join(__dirname, '..', 'speech.mp3');
   if (fs.existsSync(audioFilePath)) {
@@ -87,10 +119,8 @@ router.get('/download-audio', (req, res) => {
       if (err) {
         console.error('Error downloading audio file:', err);
       } else {
-        // Delete the audio file after sending
-        fs.unlink(audioFilePath, (unlinkErr) => {
-          if (unlinkErr) console.error('Error deleting audio file:', unlinkErr);
-        });
+        // Delete audio file after sending
+        setTimeout(() => safeDelete(audioFilePath), 500);
       }
     });
   } else {

@@ -19,7 +19,8 @@ chat = ChatGroq(
 serper = GoogleSerperAPIWrapper(serper_api_key=SERPER_API_KEY)
 
 def get_mcq_prompt(topic: str, noq: int, level: str) -> str:
-    return f"""Create {noq} multiple choice questions about {topic} at {level} level.
+    return f"""You are a data structure and algorithm expert.
+Create {noq} multiple choice questions about {topic} at {level} level.
 
 Return ONLY this JSON format:
 {{

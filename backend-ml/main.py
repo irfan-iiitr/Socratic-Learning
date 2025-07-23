@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 import logging
 import tempfile
-from GenMCQ import generate_mcqs_with_llm, generate_mcqs_with_google_search, generate_report
+from GenMCQ import generate_mcqs
 from Resources import searchResources
 from fastapi.responses import FileResponse, JSONResponse
 from multimodelHelper import llm_model_audio, llm_model_image, llm_model_video, text_to_speech
@@ -162,13 +162,7 @@ async def options_generate_mcqs():
 async def generate_mcqs_endpoint(data: MCQRequest):
     logger.info(f"Received MCQ generation request: Topic: {data.topic}, NoQ: {data.noq}, Level: {data.level}")
     
-    mcqs = generate_mcqs_with_llm(data.topic, data.noq, data.level)
-    if not mcqs:
-        logger.info("Falling back to Google Search for generating MCQs...")
-        mcqs = generate_mcqs_with_google_search(data.topic, data.noq)
-    
-    if not mcqs:
-        raise HTTPException(status_code=404, detail="Unable to generate MCQs")
+    mcqs = generate_mcqs(data.topic, data.noq, data.level)
     
     logger.info(f"Generated {len(mcqs)} MCQs")
     return {"mcqs": mcqs}
